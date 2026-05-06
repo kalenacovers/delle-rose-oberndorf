@@ -170,38 +170,59 @@
     input.min = `${yyyy}-${mm}-${dd}`;
   }
 
-  /* ─── Reservation form (demo: prevent + show success) ───── */
-  function initReservationForm() {
-    const form = document.querySelector('[data-reservation-form]');
+  /* ─── Generic form submit via /api/submit ──────────────────── */
+  function initForm(selector, formType) {
+    const form = document.querySelector(selector);
     if (!form) return;
     const success = form.querySelector('[data-form-success]');
-    form.addEventListener('submit', (e) => {
+    const submitBtn = form.querySelector('[type="submit"]');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!form.reportValidity()) return;
-      form.querySelectorAll('input, select, textarea, button').forEach((el) => (el.disabled = true));
-      if (success) {
-        success.hidden = false;
-        success.focus?.();
-        success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      const originalLabel = submitBtn ? submitBtn.textContent : null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wird gesendet …';
+      }
+
+      const data = { _type: formType };
+      new FormData(form).forEach((val, key) => { data[key] = val; });
+
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (res.ok) {
+          form.querySelectorAll('input, select, textarea, button').forEach((el) => (el.disabled = true));
+          if (success) {
+            success.hidden = false;
+            success.focus?.();
+            success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+          }
+          alert('Beim Senden ist ein Fehler aufgetreten. Bitte rufen Sie uns direkt an: 07423 · 870 05 70');
+        }
+      } catch {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalLabel;
+        }
+        alert('Keine Verbindung. Bitte rufen Sie uns direkt an: 07423 · 870 05 70');
       }
     });
   }
 
-  /* ─── Catering form (demo) ─────────────────────────────────── */
-  function initCateringForm() {
-    const form = document.querySelector('[data-catering-form]');
-    if (!form) return;
-    const success = form.querySelector('[data-form-success]');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!form.reportValidity()) return;
-      form.querySelectorAll('input, select, textarea, button').forEach((el) => (el.disabled = true));
-      if (success) {
-        success.hidden = false;
-        success.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    });
-  }
+  function initReservationForm() { initForm('[data-reservation-form]', 'reservation'); }
+  function initCateringForm()    { initForm('[data-catering-form]', 'catering'); }
 
   /* ─── Active menu category ────────────────────────────────── */
   function initMenuActiveCategory() {
